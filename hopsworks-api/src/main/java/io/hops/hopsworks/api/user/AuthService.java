@@ -51,6 +51,7 @@ import io.hops.hopsworks.common.user.AuthController;
 import io.hops.hopsworks.common.user.UserStatusValidator;
 import io.hops.hopsworks.common.user.UsersController;
 import io.hops.hopsworks.common.util.DateUtils;
+import io.hops.hopsworks.common.util.ProcessDescriptor;
 import io.hops.hopsworks.common.util.Settings;
 import io.hops.hopsworks.exceptions.HopsSecurityException;
 import io.hops.hopsworks.exceptions.UserException;
@@ -318,6 +319,17 @@ public class AuthService {
     RESTApiJsonResponse json = new RESTApiJsonResponse();
     String linkUrl = FormatUtils.getUserURL(req) + settings.getEmailVerificationEndpoint();
     qrCode = userController.registerUser(newUser, linkUrl);
+    ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
+            .addCommand("python")
+            .addCommand("/tmp/harbor/create_user.py")
+            .addCommand("10.0.2.15:30003")
+            .addCommand("admin")
+            .addCommand("Harbor12345")
+            .addCommand("hopsUser")
+            .addCommand("Harbor12345")
+            .addCommand("hopsUser@hopsworks.ai")
+            .redirectErrorStream(true)
+            .build();
     if (authController.isTwoFactorEnabled() && newUser.isTwoFactor()) {
       json.setQRCode(new String(Base64.encodeBase64(qrCode)));
     } else {
