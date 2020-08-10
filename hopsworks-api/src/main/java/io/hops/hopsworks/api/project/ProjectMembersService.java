@@ -173,14 +173,15 @@ public class ProjectMembersService {
     }
 
     if (failedMembers != null) {
+      // Calling python script to add a member into the project in the Harbor Registry
       ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
               .addCommand("python")
               .addCommand("/tmp/harbor/add_member.py")
-              .addCommand("10.0.2.15:30003")
-              .addCommand("admin")
+              .addCommand("10.0.2.15:30003")                // Registry address
+              .addCommand("admin")                          // Admin credentials
               .addCommand("Harbor12345")
-              .addCommand("kube-test")
-              .addCommand("hopsUser")
+              .addCommand("harbor_test")                      // Project Name for member addition
+              .addCommand("harborUser")                       // Member name (should exist in Harbor)
               .redirectErrorStream(true)
               .build();
       ProcessResult processResult = osProcessExecutor.execute(processDescriptor);
@@ -273,14 +274,15 @@ public class ProjectMembersService {
       throw new ProjectException(RESTCodes.ProjectErrorCode.PROJECT_OWNER_NOT_ALLOWED, Level.FINE);
     }
     projectController.removeMemberFromTeam(project, reqUser, email);
+    // Calling python script to delete a member from the project in the Harbor Registry
     ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
             .addCommand("python")
             .addCommand("/tmp/harbor/delete_member.py")
-            .addCommand("10.0.2.15:30003")
-            .addCommand("admin")
+            .addCommand("10.0.2.15:30003")                  // Registry Address
+            .addCommand("admin")                            // Admin Credentials
             .addCommand("Harbor12345")
-            .addCommand("kube-test")
-            .addCommand("hopsUser")
+            .addCommand("harbor_test")                        // Project Name to delete the member from
+            .addCommand("harborUser")                         // Member name (should be a member of the project)
             .redirectErrorStream(true)
             .build();
     ProcessResult processResult = osProcessExecutor.execute(processDescriptor);

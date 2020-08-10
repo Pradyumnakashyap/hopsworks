@@ -617,13 +617,14 @@ public class ProjectService {
             HopsSecurityException, FeaturestoreException, ElasticException, SchemaException, IOException {
 
         Users user = jWTHelper.getUserPrincipal(sc);
+        // Calling python script to create a project in the Harbor Registry
         ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
                 .addCommand("python")
                 .addCommand("/tmp/harbor/project_creation.py")
-                .addCommand("10.0.2.15:30003")
-                .addCommand("admin")
+                .addCommand("10.0.2.15:30003")                 // Registry Address
+                .addCommand("admin")                           // Admin credentials
                 .addCommand("Harbor12345")
-                .addCommand("kube-test")
+                .addCommand("harbor_test")                       // Project name to be created
                 .redirectErrorStream(true)
                 .build();
         ProcessResult processResult = osProcessExecutor.execute(processDescriptor);
@@ -656,13 +657,14 @@ public class ProjectService {
 
         Users user = jWTHelper.getUserPrincipal(sc);
         RESTApiJsonResponse json = new RESTApiJsonResponse();
+        // Calling python script to delete a project in the Harbor Registry
         ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
                 .addCommand("python")
                 .addCommand("/tmp/harbor/project_deletion.py")
-                .addCommand("10.0.2.15:30003")
-                .addCommand("admin")
+                .addCommand("10.0.2.15:30003")                      // Registry Address
+                .addCommand("admin")                                 // Admin credentials
                 .addCommand("Harbor12345")
-                .addCommand("kube-test")
+                .addCommand("harbor_test")                          // Project name to be deleted
                 .redirectErrorStream(true)
                 .build();
         ProcessResult processResult = osProcessExecutor.execute(processDescriptor);

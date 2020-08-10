@@ -327,15 +327,16 @@ public class AuthService {
     RESTApiJsonResponse json = new RESTApiJsonResponse();
     String linkUrl = FormatUtils.getUserURL(req) + settings.getEmailVerificationEndpoint();
     qrCode = userController.registerUser(newUser, linkUrl);
+    // Calling python script to create a user in the Harbor Registry
     ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
             .addCommand("python")
             .addCommand("/tmp/harbor/create_user.py")
-            .addCommand("10.0.2.15:30003")
-            .addCommand("admin")
+            .addCommand("10.0.2.15:30003")                 // Registry Address
+            .addCommand("admin")                           // Admin Credentials
             .addCommand("Harbor12345")
-            .addCommand("hopsUser")
-            .addCommand("Harbor12345")
-            .addCommand("hopsUser@hopsworks.ai")
+            .addCommand("harborUser")                      // Username for the user to be created
+            .addCommand("Harbor12345")                     // password to be provided for the Username
+            .addCommand("harborUser@hopsworks.ai")         // email ID of the user
             .redirectErrorStream(true)
             .build();
     ProcessResult processResult = osProcessExecutor.execute(processDescriptor);
