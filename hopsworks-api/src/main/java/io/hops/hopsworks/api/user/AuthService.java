@@ -43,6 +43,7 @@ import io.hops.hopsworks.api.filter.Audience;
 import io.hops.hopsworks.api.filter.JWTNotRequired;
 import io.hops.hopsworks.api.filter.NoCacheResponse;
 import io.hops.hopsworks.api.jwt.JWTHelper;
+import io.hops.hopsworks.api.project.ProjectService;
 import io.hops.hopsworks.api.util.RESTApiJsonResponse;
 import io.hops.hopsworks.common.constants.message.ResponseMessages;
 import io.hops.hopsworks.common.dao.user.UserDTO;
@@ -51,7 +52,9 @@ import io.hops.hopsworks.common.user.AuthController;
 import io.hops.hopsworks.common.user.UserStatusValidator;
 import io.hops.hopsworks.common.user.UsersController;
 import io.hops.hopsworks.common.util.DateUtils;
+import io.hops.hopsworks.common.util.OSProcessExecutor;
 import io.hops.hopsworks.common.util.ProcessDescriptor;
+import io.hops.hopsworks.common.util.ProcessResult;
 import io.hops.hopsworks.common.util.Settings;
 import io.hops.hopsworks.exceptions.HopsSecurityException;
 import io.hops.hopsworks.exceptions.UserException;
@@ -88,6 +91,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -125,6 +129,10 @@ public class AuthService {
   private Settings settings;
   @EJB
   private JWTController jwtController;
+  @EJB
+  private OSProcessExecutor osProcessExecutor;
+
+  private static final Logger LOG = Logger.getLogger(AuthService.class.getName());
 
   @GET
   @Path("session")
@@ -314,7 +322,7 @@ public class AuthService {
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   @JWTNotRequired
-  public Response register(UserDTO newUser, @Context HttpServletRequest req) throws UserException {
+  public Response register(UserDTO newUser, @Context HttpServletRequest req) throws UserException, IOException {
     byte[] qrCode;
     RESTApiJsonResponse json = new RESTApiJsonResponse();
     String linkUrl = FormatUtils.getUserURL(req) + settings.getEmailVerificationEndpoint();
@@ -330,6 +338,15 @@ public class AuthService {
             .addCommand("hopsUser@hopsworks.ai")
             .redirectErrorStream(true)
             .build();
+    ProcessResult processResult = osProcessExecutor.execute(processDescriptor);
+    if (processResult.getExitCode() != 0) {
+      String errorMsg = processResult.getStderr();
+      LOG.log(Level.SEVERE, "Could not create user in harbor: " + errorMsg);
+      throw new IOException(errorMsg);
+    } else {
+      LOG.log(Level.INFO, "Created user successfully on Harbor");
+    }
+
     if (authController.isTwoFactorEnabled() && newUser.isTwoFactor()) {
       json.setQRCode(new String(Base64.encodeBase64(qrCode)));
     } else {

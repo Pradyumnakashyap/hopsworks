@@ -42,6 +42,7 @@ import io.hops.hopsworks.api.filter.AllowedProjectRoles;
 import io.hops.hopsworks.api.filter.Audience;
 import io.hops.hopsworks.api.filter.NoCacheResponse;
 import io.hops.hopsworks.api.jwt.JWTHelper;
+import io.hops.hopsworks.api.user.AuthService;
 import io.hops.hopsworks.api.util.RESTApiJsonResponse;
 import io.hops.hopsworks.common.constants.message.ResponseMessages;
 import io.hops.hopsworks.common.dao.project.service.ProjectServiceFacade;
@@ -51,6 +52,9 @@ import io.hops.hopsworks.common.featurestore.FeaturestoreDTO;
 import io.hops.hopsworks.common.featurestore.online.OnlineFeaturestoreController;
 import io.hops.hopsworks.common.project.MembersDTO;
 import io.hops.hopsworks.common.project.ProjectController;
+import io.hops.hopsworks.common.util.OSProcessExecutor;
+import io.hops.hopsworks.common.util.ProcessDescriptor;
+import io.hops.hopsworks.common.util.ProcessResult;
 import io.hops.hopsworks.common.util.Settings;
 import io.hops.hopsworks.exceptions.FeaturestoreException;
 import io.hops.hopsworks.exceptions.GenericException;
@@ -109,6 +113,10 @@ public class ProjectMembersService {
   private JWTHelper jWTHelper;
   @EJB
   private FeaturestoreController featurestoreController;
+  @EJB
+  private OSProcessExecutor osProcessExecutor;
+
+  private static final Logger LOG = Logger.getLogger(AuthService.class.getName());
   
   private Integer projectId;
 
@@ -143,7 +151,7 @@ public class ProjectMembersService {
   @JWTRequired(acceptedTokens = {Audience.API},
       allowedUserRoles = {"HOPS_ADMIN", "HOPS_USER"})
   public Response addMembers(MembersDTO members, @Context SecurityContext sc) throws KafkaException,
-    ProjectException, UserException, FeaturestoreException {
+          ProjectException, UserException, FeaturestoreException, IOException {
 
     Project project = projectController.findProjectById(this.projectId);
     RESTApiJsonResponse json = new RESTApiJsonResponse();
@@ -165,6 +173,24 @@ public class ProjectMembersService {
     }
 
     if (failedMembers != null) {
+      ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
+              .addCommand("python")
+              .addCommand("/tmp/harbor/add_member.py")
+              .addCommand("10.0.2.15:30003")
+              .addCommand("admin")
+              .addCommand("Harbor12345")
+              .addCommand("kube-test")
+              .addCommand("hopsUser")
+              .redirectErrorStream(true)
+              .build();
+      ProcessResult processResult = osProcessExecutor.execute(processDescriptor);
+      if (processResult.getExitCode() != 0) {
+        String errorMsg = processResult.getStderr();
+        LOG.log(Level.SEVERE, "Could not add member to project in harbor: " + errorMsg);
+        throw new IOException(errorMsg);
+      } else {
+        LOG.log(Level.INFO, "Member added successfully to project on Harbor");
+      }
       json.setFieldErrors(failedMembers);
       if (members.getProjectTeam().size() > failedMembers.size() + 1) {
         json.setSuccessMessage(ResponseMessages.PROJECT_MEMBERS_ADDED);
@@ -247,6 +273,24 @@ public class ProjectMembersService {
       throw new ProjectException(RESTCodes.ProjectErrorCode.PROJECT_OWNER_NOT_ALLOWED, Level.FINE);
     }
     projectController.removeMemberFromTeam(project, reqUser, email);
+    ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
+            .addCommand("python")
+            .addCommand("/tmp/harbor/delete_member.py")
+            .addCommand("10.0.2.15:30003")
+            .addCommand("admin")
+            .addCommand("Harbor12345")
+            .addCommand("kube-test")
+            .addCommand("hopsUser")
+            .redirectErrorStream(true)
+            .build();
+    ProcessResult processResult = osProcessExecutor.execute(processDescriptor);
+    if (processResult.getExitCode() != 0) {
+      String errorMsg = processResult.getStderr();
+      LOG.log(Level.SEVERE, "Could not create harbor project: " + errorMsg);
+      throw new IOException(errorMsg);
+    } else {
+      LOG.log(Level.INFO, "Created Harbor project successfully");
+    }
 
     if (projectServiceFacade.isServiceEnabledForProject(project, ProjectServiceEnum.FEATURESTORE)) {
       Users member = projectTeamFacade.findUserByEmail(email);      
