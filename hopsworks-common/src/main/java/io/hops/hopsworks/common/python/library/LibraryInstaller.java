@@ -160,10 +160,9 @@ public class LibraryInstaller {
         .addCommand(prog)
         .addCommand("create")
         .addCommand(dockerFile.getAbsolutePath())
-        .addCommand(projectUtils.getRegistryURL() + "/" + initialDockerImage)
-        .redirectErrorStream(true)
+        .addCommand(projectUtils.getRegistryURL() + "/" + initialDockerImage)     //Change code to provide
+        .redirectErrorStream(true)                                                // Harbor registry address
         .setCurrentWorkingDirectory(baseDir)
-        .setWaitTimeout(300L, TimeUnit.SECONDS)
         .build();
 
     try {
@@ -239,6 +238,7 @@ public class LibraryInstaller {
 
     String nextDockerImageName = getNextDockerImageName(cc.getProjectId());
 
+
     ProcessDescriptor processDescriptor = new ProcessDescriptor.Builder()
         .addCommand("/usr/bin/sudo")
         .addCommand(prog)
@@ -247,7 +247,6 @@ public class LibraryInstaller {
         .addCommand(projectUtils.getRegistryURL() + "/" + nextDockerImageName)
         .redirectErrorStream(true)
         .setCurrentWorkingDirectory(baseDir)
-        .setWaitTimeout(300L, TimeUnit.SECONDS)
         .build();
 
     try {
@@ -261,6 +260,7 @@ public class LibraryInstaller {
         project.setDockerImage(nextDockerImageName);
         projectFacade.update(project);
       }
+
     } finally {
       FileUtils.deleteDirectory(baseDir);
     }
@@ -303,7 +303,6 @@ public class LibraryInstaller {
         .addCommand(projectUtils.getRegistryURL() + "/" + nextDockerImageName)
         .redirectErrorStream(true)
         .setCurrentWorkingDirectory(baseDir)
-        .setWaitTimeout(300L, TimeUnit.SECONDS)
         .build();
 
     try {
