@@ -23,8 +23,8 @@ def get_project_id(project_name):
 				sys.exit(1)
         		resp_dump = json.dumps(resp.text)
         		resp_str = json.loads(resp_dump)
-			project_id =  int(resp_str[24:35].split(',', 1)[0][0])
-			repo_count =  int(resp_str[298:308].split(',', 1)[0])
+			project_id =  int(resp_str[24:35].split(',', 1)[0])
+			repo_count =  int(resp_str[300:308].split(',', 1)[0])
 			return project_id, repo_count
 		else:
 			print(r'Project with name {} does not exists!'.format(project_name))
